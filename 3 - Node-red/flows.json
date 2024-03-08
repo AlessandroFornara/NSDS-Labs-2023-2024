@@ -1,0 +1,237 @@
+[
+    {
+        "id": "997da725dd038780",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "cf2dce25fac58f62",
+        "type": "function",
+        "z": "997da725dd038780",
+        "name": "handle request",
+        "func": "if (msg.payload.content == \"What tomorrow's forecast in Milan?\")\n{\n    flow.set(\"time\", \"tomorrow\");\n    flow.set(\"type\", \"forecast\");\n    flow.set(\"city\", \"milan\");\n    return [null, msg, null];\n}\nelse if (msg.payload.content == \"What tomorrow's forecast in Rome?\")\n{\n    flow.set(\"time\", \"tomorrow\");\n    flow.set(\"type\", \"forecast\");\n    flow.set(\"city\", \"rome\");\n    return [msg, null, null];\n}\nelse if (msg.payload.content == \"What tomorrow's expected wind in Milan?\") {\n    flow.set(\"time\", \"tomorrow\");\n    flow.set(\"type\", \"wind\");\n    flow.set(\"city\", \"milan\");\n    return [null, msg, null];\n}\nelse if (msg.payload.content == \"What tomorrow's expected wind in Rome?\") {\n    flow.set(\"time\", \"tomorrow\");\n    flow.set(\"type\", \"wind\");\n    flow.set(\"city\", \"rome\");\n    return [msg, null, null];\n}\n\n// 2 DAYS\nelse if (msg.payload.content == \"What's the expected forecast in two days in Milan?\") {\n    flow.set(\"time\", \"2days\");\n    flow.set(\"type\", \"forecast\");\n    flow.set(\"city\", \"milan\");\n    return [null, msg, null];\n}\nelse if (msg.payload.content == \"What's the expected forecast in two days in Rome?\") {\n    flow.set(\"time\", \"2days\");\n    flow.set(\"type\", \"forecast\");\n    flow.set(\"city\", \"rome\");\n    return [msg, null, null];\n}\nelse if (msg.payload.content == \"What's the expected wind in two days in Milan?\") {\n    flow.set(\"time\", \"2days\");\n    flow.set(\"type\", \"wind\");\n    flow.set(\"city\", \"milan\");\n    return [null, msg, null];\n}\nelse if (msg.payload.content == \"What's the expected wind in two days in Rome?\") {\n    flow.set(\"time\", \"2days\");\n    flow.set(\"type\", \"wind\");\n    flow.set(\"city\", \"rome\");\n    return [msg, null, null];\n}\n\nelse\n{\n    msg.payload.content = \"I don't get what you're asking...\";\n    return [null, null, msg];\n}",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Code added here will be run once\n// whenever the node is started.\nflow.set(\"time\", \"\"); // tomorrow or 2 days\nflow.set(\"type\", \"\"); // weather or wind\nflow.set(\"city\", \"\"); // rome or milan",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 300,
+        "wires": [
+            [
+                "40a0e243f1e9bcbe"
+            ],
+            [
+                "980ff8c6387f568c"
+            ],
+            [
+                "6b02217004c27d93"
+            ]
+        ]
+    },
+    {
+        "id": "40a0e243f1e9bcbe",
+        "type": "openweathermap",
+        "z": "997da725dd038780",
+        "name": "Ask Rome",
+        "wtype": "forecast",
+        "lon": "",
+        "lat": "",
+        "city": "Rome",
+        "country": "Italy",
+        "language": "en",
+        "x": 590,
+        "y": 240,
+        "wires": [
+            [
+                "632db6e03901b3da"
+            ]
+        ]
+    },
+    {
+        "id": "f779c049490fed17",
+        "type": "inject",
+        "z": "997da725dd038780",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 310,
+        "y": 440,
+        "wires": [
+            [
+                "137677a97b418c44"
+            ]
+        ]
+    },
+    {
+        "id": "980ff8c6387f568c",
+        "type": "openweathermap",
+        "z": "997da725dd038780",
+        "name": "Ask Milan",
+        "wtype": "forecast",
+        "lon": "",
+        "lat": "",
+        "city": "Milan",
+        "country": "Italy",
+        "language": "en",
+        "x": 580,
+        "y": 300,
+        "wires": [
+            [
+                "632db6e03901b3da"
+            ]
+        ]
+    },
+    {
+        "id": "632db6e03901b3da",
+        "type": "function",
+        "z": "997da725dd038780",
+        "name": "create answer",
+        "func": "let unchangedData = \" | Data hasn't changed since last time it was asked\";\nlet changedData = \" | Data has changed since the last time it was asked\";\n\n// get data index based on time\nlet idx = 0;\nif(flow.get(\"time\") == \"tomorrow\")\n{\n    idx = 7;\n}\nelse\n{\n    idx = 15;\n}\n\n//let city = flow.get(\"city\");\n\nlet requestedData = \"\";\nif(flow.get(\"type\") == \"wind\")\n{\n    requestedData = msg.payload[idx].wind.speed;\n    flow.set(\"numWindRequests\", flow.get(\"numWindRequests\") + 1);\n}\nelse\n{\n    requestedData = msg.payload[idx].weather[0].description;\n    flow.set(\"numWeatherRequests\", flow.get(\"numWeatherRequests\") + 1);\n}\n\nmsg.payload = \"ciao\";\n\nif(flow.get(\"type\") == \"wind\")\n{\n    if(flow.get(\"time\") == \"2days\")\n    {\n        if(flow.get(\"city\") == \"milan\")\n        {\n            msg.payload = \"Wind speed in Milan in two days is \" + requestedData;\n            if(requestedData == context.get(\"windMilanTwoDays\"))\n            {\n                msg.payload += unchangedData;\n            }\n            else\n            {\n                msg.payload += changedData;\n                context.set(\"windMilanTwoDays\", requestedData);\n            }\n        }\n        else\n        {\n            msg.payload = \"Wind speed in Rome in two days is \" + requestedData;\n            if (requestedData == context.get(\"windRomeTwoDays\")) {\n                msg.payload += unchangedData;\n            }\n            else {\n                msg.payload += changedData;\n                context.set(\"windRomeTwoDays\", requestedData);\n            }\n        }\n    }\n    else\n    {\n        if(flow.get(\"city\") == \"milan\")\n        {\n            msg.payload = \"Wind speed in Milan tomorrow is \" + requestedData;\n            if (requestedData == context.get(\"windMilanTomorrow\")) {\n                msg.payload += unchangedData;\n            }\n            else {\n                msg.payload += changedData;\n                context.set(\"windMilanTomorrow\", requestedData);\n            }\n        }\n        else\n        {\n            msg.payload = \"Wind speed in Rome tomorrow is \" + requestedData;\n            if (requestedData == context.get(\"windRomeTomorrow\")) {\n                msg.payload += unchangedData;\n            }\n            else {\n                msg.payload += changedData;\n                context.set(\"windRomeTomorrow\", requestedData);\n            }\n        }\n    }\n}\nelse // weather\n{\n    if (flow.get(\"time\") == \"2days\") {\n        if (flow.get(\"city\") == \"milan\") {\n            msg.payload = \"Forecast in Milan in two days is \" + requestedData;\n            if (requestedData == context.get(\"weatherMilanTwoDays\")) {\n                msg.payload += unchangedData;\n            }\n            else {\n                msg.payload += changedData;\n                context.set(\"weatherMilanTwoDays\", requestedData);\n            }\n        }\n        else {\n            msg.payload = \"Forecast in Rome in two days is \" + requestedData;\n            if (requestedData == context.get(\"weatherRomeTwoDays\")) {\n                msg.payload += unchangedData;\n            }\n            else {\n                msg.payload += changedData;\n                context.set(\"weatherRomeTwoDays\", requestedData);\n            }\n        }\n    }\n    else {\n        if (flow.get(\"city\") == \"milan\") {\n            msg.payload = \"Forecast in Milan tomorrow is \" + requestedData;\n            if (requestedData == context.get(\"weatherMilanTomorrow\")) {\n                msg.payload += unchangedData;\n            }\n            else {\n                msg.payload += changedData;\n                context.set(\"weatherMilanTomorrow\", requestedData);\n            }\n        }\n        else {\n            msg.payload = \"Forecast in Rome tomorrow is \" + requestedData;\n            if (requestedData == context.get(\"weatherRomeTomorrow\")) {\n                msg.payload += unchangedData;\n            }\n            else {\n                msg.payload += changedData;\n                context.set(\"weatherRomeTomorrow\", requestedData);\n            }\n        }\n    }\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Code added here will be run once\n// whenever the node is started.\ncontext.set(\"weatherMilanTomorrow\", \"\");\ncontext.set(\"weatherRomeTomorrow\", \"\");\ncontext.set(\"weatherMilanTwoDays\", \"\");\ncontext.set(\"weatherRomeTwoDays\", \"\");\n\ncontext.set(\"windRomeTomorrow\", \"\");\ncontext.set(\"windMilanTomorrow\", \"\");\ncontext.set(\"windRomeTwoDays\", \"\");\ncontext.set(\"windMilanTwoDays\", \"\");",
+        "finalize": "",
+        "libs": [],
+        "x": 820,
+        "y": 340,
+        "wires": [
+            [
+                "c6197512f6461b55"
+            ]
+        ]
+    },
+    {
+        "id": "137677a97b418c44",
+        "type": "function",
+        "z": "997da725dd038780",
+        "name": "logger",
+        "func": "let nWeatherReq = flow.get(\"numWeatherRequests\").toString();\nlet nWindReq = flow.get(\"numWindRequests\").toString();\n\nmsg.payload = \"number of forecast requests: \" + nWeatherReq\n                + \"\\nnumber of wind requests: \" + nWindReq;\n\nflow.set(\"numWeatherRequests\", 0);\nflow.set(\"numWindRequests\", 0);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Code added here will be run once\n// whenever the node is started.\nflow.set(\"numWeatherRequests\", 0);\nflow.set(\"numWindRequests\", 0);",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 460,
+        "wires": [
+            [
+                "717552c211d0aa70"
+            ]
+        ]
+    },
+    {
+        "id": "717552c211d0aa70",
+        "type": "file",
+        "z": "997da725dd038780",
+        "name": "write log",
+        "filename": "log.txt",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 740,
+        "y": 480,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a31a7ef98f3b6193",
+        "type": "chatbot-telegram-receive",
+        "z": "997da725dd038780",
+        "bot": "ab03caeba4f51de3",
+        "botProduction": "",
+        "x": 110,
+        "y": 300,
+        "wires": [
+            [
+                "cf2dce25fac58f62",
+                "32dea2ce51a54494"
+            ]
+        ]
+    },
+    {
+        "id": "6b02217004c27d93",
+        "type": "chatbot-telegram-send",
+        "z": "997da725dd038780",
+        "bot": "ab03caeba4f51de3",
+        "botProduction": "",
+        "track": false,
+        "passThrough": false,
+        "errorOutput": false,
+        "outputs": 0,
+        "x": 1030,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "c6197512f6461b55",
+        "type": "chatbot-message",
+        "z": "997da725dd038780",
+        "name": "",
+        "message": [
+            {
+                "message": "{{msg.payload}}"
+            }
+        ],
+        "language": "none",
+        "x": 1010,
+        "y": 360,
+        "wires": [
+            [
+                "6b02217004c27d93"
+            ]
+        ]
+    },
+    {
+        "id": "32dea2ce51a54494",
+        "type": "debug",
+        "z": "997da725dd038780",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 360,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "ab03caeba4f51de3",
+        "type": "chatbot-telegram-node",
+        "botname": "group19_eval_bot",
+        "usernames": "",
+        "polling": "1000",
+        "store": "",
+        "log": "",
+        "debug": false,
+        "skipMediaFiles": false,
+        "webHook": "",
+        "connectMode": "polling",
+        "storeMessages": true,
+        "enableMissionControl": false,
+        "inspectMessages": true,
+        "chatbotId": ""
+    }
+]
